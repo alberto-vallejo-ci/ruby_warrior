@@ -1,5 +1,7 @@
 class Player
 
+  require 'pry'
+
   FIELD = { enemies:[], bound_enemies: [], captives: [], empty: [] }
 
   def play_turn(warrior)
@@ -26,7 +28,7 @@ class Player
     elsif captives > 0
       rescue_captives warrior
     else
-      move_on warrior
+      advance warrior
     end
   end
 
@@ -42,19 +44,20 @@ class Player
     warrior.rescue! direction
   end
 
-  def move_on(warrior)
+  def advance(warrior)
     direction = warrior.direction_of_stairs
     feeling = warrior.feel direction
 
     if feeling.empty?
-      warrior.walk! direction
+      move warrior, direction
+      clean_field
     elsif feeling.enemy?
       warrior.attack! direction
     elsif feeling.captive?
       evaluate_captive warrior, direction
     end
   end
-  
+
   def evaluate_captive(warrior, direction)
     if FIELD[:bound_enemies].include?(direction)
       warrior.attack!(direction)
@@ -62,5 +65,36 @@ class Player
     else
       warrior.rescue!(direction)
     end
+  end
+
+  def move(warrior, direction)
+    captive = looking_for 'Captive', warrior
+
+    if captive
+      captive_dir = warrior.direction_of captive
+      direction = captive_dir if direction != captive_dir
+    end
+
+    warrior.walk! direction
+  end
+
+  def clean_field
+    [:enemies, :bound_enemies, :captives, :empty].each do |type|
+      FIELD[type].clear
+    end
+    @looked = false
+  end
+
+  def looking_for(type, warrior)
+    chosen = false
+
+    warrior.listen.each do |space|
+      if type == space.to_s
+        chosen = space
+        break
+      end
+    end
+
+    chosen
   end
 end
